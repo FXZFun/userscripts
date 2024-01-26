@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rental Utils
 // @namespace    https://fxzfun.com/userscripts
-// @version      2024-01-07
+// @version      2024-01-25
 // @description  cleans up the unnecessary junk off the end of urls and links location to vrbo
 // @author       FXZFun
 // @match        https://*.vrbo.com/*
@@ -9,6 +9,8 @@
 // @icon         https://fxzfun.com/favicon.ico
 // @grant        none
 // ==/UserScript==
+
+/* global __PLUGIN_STATE__ */
 
 (async function() {
     'use strict';
@@ -23,13 +25,15 @@
         const woSearch = window.location.href.replace(window.location.search, '');
         window.history.replaceState(null, null, woSearch);
 
-        const ll = new URLSearchParams(__PLUGIN_STATE__.controllers.stores.staticMap.signedUrlNoPins).get("center").split(',');
-        const addr = await getAddress(ll[0], ll[1]);
-        console.log(ll);
+        const key = Object.keys(__PLUGIN_STATE__.apollo.apolloState).filter(k => k.startsWith('PropertyInfo'))[0];
+        const { latitude, longitude } = __PLUGIN_STATE__.apollo.apolloState[key].summary.location.coordinates;
+
+        // const ll = new URLSearchParams(__PLUGIN_STATE__.controllers.stores.staticMap.signedUrlNoPins).get("center").split(',');
+        const addr = await getAddress(latitude, longitude);
         console.log(addr);
         const p = document.createElement("a");
         p.target = "_blank";
-        p.href = `https://www.google.com/maps/search/?api=1&query=${ll}`;
+        p.href = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
         p.style = "position: relative;background: #ffffffd1;z-index: 999;";
         p.innerText = addr;
         [...document.querySelectorAll("img")].filter(i => i.src.startsWith("https://maps.googleapis.com"))[0].insertAdjacentElement("afterEnd", p);
