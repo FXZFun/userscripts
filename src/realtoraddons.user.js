@@ -1,20 +1,21 @@
 // ==UserScript==
 // @name         Realtor Addons
 // @namespace    https://fxzfun.com/userscripts
-// @version      1.0.1
-// @description  Adds distance to nearest WELS church on the search results and a bunch of other stuff
+// @version      1.0.2
+// @description  Provides additional functionality to Realtor.com and other real estate sites, adding crime map overlay, distance to HEB, and closest WELS/ELS church
 // @author       FXZFun
 // @match        https://www.realtor.com/realestateandhomes-search/*
 // @match        https://www.realtor.com/realestateandhomes-detail/*
 // @match        https://www.har.com/homedetail/*
+// @match        https://www.newhomesource.com/communities/map*
 // @require      https://unpkg.com/@turf/turf@6/turf.min.js
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
 // @license      MIT
+// @require https://update.greasyfork.org/scripts/502534/1421629/HEB%20Store%20Locations.js
 // @downloadURL https://update.greasyfork.org/scripts/483650/Realtor%20Addons.user.js
 // @updateURL https://update.greasyfork.org/scripts/483650/Realtor%20Addons.meta.js
-// @require https://update.greasyfork.org/scripts/502534/1421629/HEB%20Store%20Locations.js
 // ==/UserScript==
 
 /* global turf, results, hebLocations */
@@ -181,61 +182,114 @@
     }
     // ============================================================================================================================================================================================== Crime Overlay
     try {
-        if (settings.shouldRunCrimeOverlay && location.href.includes("search") && location.href.includes("realtor")) {
-            console.log("Realtor Addons: running crime overlay");
+        if (settings.shouldRunCrimeOverlay) {
+            if (location.href.includes("search") && location.href.includes("realtor")) {
+                console.log("Realtor Addons: running crime overlay");
 
-            let lastUrl;
-            const iframe = document.createElement("iframe");
-            pageWindow.iframee = iframe;
-            iframe.src = "https://crimegrade.org/violent-crime-conroe-tx/?fullscreen=true&removeLayers=true&noChurches=true";
-            iframe.style = `display: block; position: absolute; width: 100%; height: 100%; opacity: 0.5; pointer-events: none;`;
-            let mapEl = document.querySelector(".map-inner");
-            let i = setInterval(() => {
-                if (!!mapEl) {
-                    clearInterval(i);
-                    mapEl.insertAdjacentElement("afterEnd", iframe);
-                } else {
-                    mapEl = document.querySelector(".map-inner");
-                }
-            }, 500);
+                let lastUrl;
+                const iframe = document.createElement("iframe");
+                pageWindow.iframee = iframe;
+                iframe.src = "https://crimegrade.org/violent-crime-conroe-tx/?fullscreen=true&removeLayers=true&noChurches=true";
+                iframe.style = `display: block; position: absolute; width: 100%; height: 100%; opacity: 0.5; pointer-events: none;`;
+                let mapEl = document.querySelector(".map-inner");
+                let i = setInterval(() => {
+                    if (!!mapEl) {
+                        clearInterval(i);
+                        mapEl.insertAdjacentElement("afterEnd", iframe);
+                    } else {
+                        mapEl = document.querySelector(".map-inner");
+                    }
+                }, 500);
 
-            let oldPushState = history.pushState;
-            history.pushState = function pushState() {
-                let ret = oldPushState.apply(this, arguments);
-                pageWindow.dispatchEvent(new Event('pushstate'));
-                pageWindow.dispatchEvent(new Event('locationchange'));
-                return ret;
-            };
+                let oldPushState = history.pushState;
+                history.pushState = function pushState() {
+                    let ret = oldPushState.apply(this, arguments);
+                    pageWindow.dispatchEvent(new Event('pushstate'));
+                    pageWindow.dispatchEvent(new Event('locationchange'));
+                    return ret;
+                };
 
-            let oldReplaceState = history.replaceState;
-            history.replaceState = function replaceState() {
-                let ret = oldReplaceState.apply(this, arguments);
-                pageWindow.dispatchEvent(new Event('replacestate'));
-                pageWindow.dispatchEvent(new Event('locationchange'));
-                return ret;
-            };
+                let oldReplaceState = history.replaceState;
+                history.replaceState = function replaceState() {
+                    let ret = oldReplaceState.apply(this, arguments);
+                    pageWindow.dispatchEvent(new Event('replacestate'));
+                    pageWindow.dispatchEvent(new Event('locationchange'));
+                    return ret;
+                };
 
-            pageWindow.addEventListener('popstate', () => {
-                pageWindow.dispatchEvent(new Event('locationchange'));
-            });
+                pageWindow.addEventListener('popstate', () => {
+                    pageWindow.dispatchEvent(new Event('locationchange'));
+                });
 
-            pageWindow.addEventListener('locationchange', function () {
-                let pos = JSON.parse(`[${new URLSearchParams(location.search).get("pos")}]`);
-                iframe.contentWindow?.postMessage({"sender": "realtor addons", "message": pos}, "*");
-            });
+                pageWindow.addEventListener('locationchange', function () {
+                    let pos = JSON.parse(`[${new URLSearchParams(location.search).get("pos")}]`);
+                    iframe.contentWindow?.postMessage({"sender": "realtor addons", "message": pos}, "*");
+                });
 
-            pageWindow.addEventListener("message", (event) => {
-                if (event.data &&
-                    event.data.sender == "crime map addons") {
-                    console.log("crime map said something");
-                    if (event.data.message === "loaded") pageWindow.dispatchEvent(new Event('locationchange'));
-                }
-            });
+                pageWindow.addEventListener("message", (event) => {
+                    if (event.data &&
+                        event.data.sender == "crime map addons") {
+                        console.log("crime map said something");
+                        if (event.data.message === "loaded") pageWindow.dispatchEvent(new Event('locationchange'));
+                    }
+                });
 
-            setTimeout(() => {
-                let pos = JSON.parse(`[${new URLSearchParams(location.search).get("pos")}]`);
-                iframe.contentWindow.postMessage({"sender": "realtor addons", "message": pos}, "*");
-            }, 8000);
+                setTimeout(() => {
+                    let pos = JSON.parse(`[${new URLSearchParams(location.search).get("pos")}]`);
+                    iframe.contentWindow.postMessage({"sender": "realtor addons", "message": pos}, "*");
+                }, 8000);
+            }
+            else if (location.hostname.endsWith('newhomesource.com')) {
+                console.log("Realtor Addons: running crime overlay");
+
+                let lastUrl;
+                const iframe = document.createElement("iframe");
+                pageWindow.iframee = iframe;
+                iframe.src = "https://crimegrade.org/violent-crime-conroe-tx/?fullscreen=true&removeLayers=true&noChurches=true";
+                iframe.style = `display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; z-index: 999;`;
+                let mapEl = document.querySelector(".map");
+                let i = setInterval(() => {
+                    if (!!mapEl) {
+                        clearInterval(i);
+                        mapEl.appendChild(iframe);
+                    } else {
+                        mapEl = document.querySelector(".map");
+                    }
+                }, 500);
+
+                let oldPushState = history.pushState;
+                history.pushState = function pushState() {
+                    let ret = oldPushState.apply(this, arguments);
+                    pageWindow.dispatchEvent(new Event('pushstate'));
+                    pageWindow.dispatchEvent(new Event('locationchange'));
+                    return ret;
+                };
+
+                let oldReplaceState = history.replaceState;
+                history.replaceState = function replaceState() {
+                    let ret = oldReplaceState.apply(this, arguments);
+                    pageWindow.dispatchEvent(new Event('replacestate'));
+                    pageWindow.dispatchEvent(new Event('locationchange'));
+                    return ret;
+                };
+
+                pageWindow.addEventListener('popstate', () => {
+                    pageWindow.dispatchEvent(new Event('locationchange'));
+                });
+
+                pageWindow.addEventListener('locationchange', function () {
+                    let pos = JSON.parse(`[${new URLSearchParams(location.search).get("coordinates")}]`);
+                    iframe.contentWindow?.postMessage({"sender": "realtor addons", "message": pos}, "*");
+                });
+
+                pageWindow.addEventListener("message", (event) => {
+                    if (event.data &&
+                        event.data.sender == "crime map addons") {
+                        console.log("crime map said something");
+                        if (event.data.message === "loaded") pageWindow.dispatchEvent(new Event('locationchange'));
+                    }
+                });
+            }
         }
 
     } catch (error) {
