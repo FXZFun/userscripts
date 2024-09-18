@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shorts Reminder
 // @namespace    https://fxzfun.com/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Get reminders to take a break from watching shorts (default every 15 minutes)
 // @author       FXZFun
 // @match        https://*.youtube.com/*
@@ -10,25 +10,37 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        none
 // @license      MIT
+// @downloadURL https://update.greasyfork.org/scripts/503327/Shorts%20Reminder.user.js
+// @updateURL https://update.greasyfork.org/scripts/503327/Shorts%20Reminder.meta.js
 // ==/UserScript==
 
 (function() {
     'use strict';
     // SET THIS VARIABLE TO THE NUMBER OF MINUTES TO WATCH SHORTS FOR
     const TARGET_MINUTES = 15;
+    let running = false;
+    let overallMilliseconds;
+    let startTime;
+    let interval;
 
     const waitForShorts = setInterval(() => {
         if (location.href.includes('/reel') || location.href.includes('/shorts')) {
-            clearInterval(waitForShorts);
-            run();
+            if (!running) {
+                run();
+                running = true;
+            }
+        } else {
+            overallMilliseconds += (new Date() - startTime);
+            clearInterval(interval);
+            running = false;
         }
     }, 1000);
 
     function run() {
 
-        let overallMilliseconds = 0;
-        let startTime = new Date();
-        let interval = setInterval(createOverlay, TARGET_MINUTES * 60 * 1000);
+        overallMilliseconds = 0;
+        startTime = new Date();
+        interval = setInterval(createOverlay, TARGET_MINUTES * 60 * 1000);
 
         document.addEventListener('visibilitychange', startStop);
 
