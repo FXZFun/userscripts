@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Instagram Video Controls
 // @namespace    https://fxzfun.com/
-// @version      1.0.2
+// @version      1.0.3
 // @description  Adds video player controls to Instagram videos
 // @author       FXZFun
 // @match        https://www.instagram.com/
@@ -23,12 +23,12 @@
     function addControls() {
         document.querySelectorAll("video").forEach(vid => {
                 vid.controls = "controls";
-                vid.volume = parseFloat(localStorage.getItem("ivc-volume"));
+                vid.volume = parseFloat(localStorage.getItem("ivc-volume")) || 0.8;
                 vid.addEventListener('volumechange', () => localStorage.setItem("ivc-volume", JSON.stringify(vid.muted ? 0 : vid.volume)));
                 vid.addEventListener('play', () => setTimeout(() => vid.muted = false, 10));
  
                 let vidSibling = vid.nextElementSibling.firstChild;
-                vidSibling.style = "transition: 0.5s";
+                vidSibling.style = "transition: 0.5s; pointer-events: none";
                 vidSibling.addEventListener('mouseover', () => {
                     vidSibling.classList.add("ivcControls");
                     if (controlsShowing) {
