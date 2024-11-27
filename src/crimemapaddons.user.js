@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Crime Map Addons
 // @namespace    https://fxzfun.com/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Adds searchbox and churches to crime map, syncs with realtor addon
 // @author       FXZFun
 // @match        https://crimegrade.org/*
