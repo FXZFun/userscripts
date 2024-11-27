@@ -111,7 +111,9 @@
                                      #searchTextField {
     width: 25%;
     padding: 10px;
+    transition: 0.25s;
                                      }
+                                     #searchTextField:focus { width: 50%; }
                                      form input,
         form textarea {
             width: 100%;
