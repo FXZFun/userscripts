@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.0
+// @version      0.9.1
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/modern/sleep/*
@@ -60,14 +60,23 @@
 
    const elementSelectors = {
       score: ".SleepScoreSummary_dailySleepScoreValue__GK7Te",
+      scoreTitle: "h4",
       dataFields: ".DataBlock_dataField__t4-ai",
       scoreFactors: ".SleepScoreFactorCard_sleepTypeValues__1jbrw",
       message: ".SleepScoreSummary_shortFeedbackTitle__\\+S5P1",
       graph: ".highcharts-root",
    };
 
-   const scoreEl = await getElementAsync(elementSelectors.score);
-   scoreEl.addEventListener("click", async () => {
+   const scoreEl = await getElementAsync(elementSelectors.scoreTitle);
+
+    const shareBtn = document.createElement("button");
+    shareBtn.id = "myShareBtn";
+    shareBtn.style = `background: #efefef;padding: 5px 10px;border-radius: 10px;float: right;`;
+    shareBtn.innerText = "Share";
+    scoreEl.insertAdjacentElement("beforeBegin", shareBtn);
+
+   shareBtn.addEventListener("click", async () => {
+       shareBtn.innerText = "...";
       window.sleepData = await getSleepDataAsync();
 
       const container = document.createElement("div");
@@ -261,6 +270,9 @@
             await navigator.clipboard.write([
               new ClipboardItem({ [blob.type]: blob })
             ]);
+            const sb = document.getElementById("myShareBtn");
+            sb.innerText = "Copied";
+            sb.style.background = "#4CAF50";
       });`;
 
          shadow.appendChild(imageGeneratorScript);
