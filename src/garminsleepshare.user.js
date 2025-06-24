@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.2
+// @version      0.9.3
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
-// @match        https://connect.garmin.com/modern/sleep/*
+// @match        https://connect.garmin.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=garmin.com
 // @grant        none
 // ==/UserScript==
@@ -227,7 +227,7 @@
    let currentURL = "";
    setInterval(() => {
       if (location.href !== currentURL) {
-         setupShare();
+         if (location.href.includes("/sleep/")) setupShare();
          currentURL = location.href;
       }
    }, 500);
