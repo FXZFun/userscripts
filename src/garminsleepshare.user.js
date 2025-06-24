@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.3
+// @version      0.9.4
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/*
@@ -124,13 +124,7 @@
       graphImage.src = graphUrl;
       await graphImage.decode();
       
-      const sleepGraphCanvas = document.createElement('canvas');
-      sleepGraphCanvas.width = 579;
-      sleepGraphCanvas.height = 25;
-      const sleepGraphContext = sleepGraphCanvas.getContext('2d');
-      sleepGraphContext.drawImage(graphImage, -81, -195);
-      
-      ctx.drawImage(sleepGraphCanvas, 45, 575);
+      ctx.drawImage(graphImage, 81, 195, graphImage.naturalWidth - 162, 25, 45, 575, 579, 25);
 
       return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
    }
