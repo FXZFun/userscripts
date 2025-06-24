@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.1
+// @version      0.9.2
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/modern/sleep/*
@@ -12,48 +12,176 @@
 (async function () {
    "use strict";
 
-   const getElementAsync = async (selector) => {
-      return new Promise((resolve) => {
-         const interval = setInterval(() => {
-            const element = document.querySelector(selector);
-            if (element) {
-               clearInterval(interval);
-               resolve(element);
-            }
-         }, 500);
+   async function generateImage(canvas, sleepData) {
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#212121";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Date
+      const dateString = location.href.split("/sleep/")[1]
+      const [year, month, day] = dateString.split("-")
+      // const date = new Date(year, month, day);
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+      const monthName = months[parseInt(month) - 1];
+      const prettyDateString = `${monthName.toUpperCase()} ${parseInt(day)}, ${year}`;
+
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.font = "20px sans-serif";
+      ctx.fillStyle = "#787878";
+      ctx.fillText(prettyDateString, canvas.width - 10, 10);
+
+      const mainSleepStatsArea = (canvas.width / 3) * 2;
+
+      // Overall Score
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#f2f2f2";
+      ctx.font = "bold 100px sans-serif";
+      ctx.fillText(sleepData.score, mainSleepStatsArea / 2, 180);
+
+      // Duration
+      ctx.fillStyle = "#efefef";
+      ctx.font = "30px sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillText(sleepData.duration, mainSleepStatsArea / 2, 220);
+
+      // Message
+      const messageX = mainSleepStatsArea / 2;
+      let messageY = 300;
+      const splitMessage = splitText(sleepData.message);
+      splitMessage.forEach(line => {
+         ctx.fillText(line, messageX, messageY);
+         messageY += 40;
       });
-   };
+
+      // Sleep Metrics
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      const sleepStatsIconX = mainSleepStatsArea;
+      const iconSize = 40;
+
+      // Heart Rate
+      const heartImage = new Image();
+      heartImage.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23bbb%22%20viewBox%3D%220%20-960%20960%20960%22%3E%3Cpath%20d%3D%22M480-484Zm0%20373q-20%200-39-7t-31-22L142-409q-36-35-54-81-17-47-17-99%200-108%2070-184t173-76q47%200%2090%2017%2042%2018%2076%2051%2033-33%2076-51%2042-17%2089-17%20103%200%20174%2076%2070%2076%2070%20183%200%2052-18%2099-18%2046-52%2081L550-140q-14%2015-32%2022t-38%207Zm40-521q10%200%2019%205t14%2013l63%2097h175q8-17%2011-35%204-19%204-38%200-72-47-124-46-52-114-52-32%200-62%2013-29%2014-51%2038l-27%2029q-5%205-11%208-7%203-14%203t-14-3-12-8l-27-29q-22-24-52-37-29-14-61-14-68%200-114%2052t-46%20124q0%2019%204%2038%203%2018%2010%2035h192q10%200%2019%205t14%2013l35%2054%2054-159q5-12%2015-20t23-8Zm12%20123-55%20159q-4%2012-15%2020t-23%208q-10%200-18-5-9-5-14-14l-64-97H230l232%20230%206%204q3%202%207%202t7-2%206-4l241-230H600q-10%200-18-5-9-5-15-13l-35-53Z%22%2F%3E%3C%2Fsvg%3E";
+      await heartImage.decode();
+      ctx.drawImage(heartImage, sleepStatsIconX, 100, iconSize, iconSize);
+      ctx.fillText(sleepData.heartRate, sleepStatsIconX + iconSize + 10, 100 + (iconSize / 2));
+
+      // Body Battery
+      const batteryImage = new Image();
+      batteryImage.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23bbb%22%20viewBox%3D%220%20-960%20960%20960%22%3E%3Cpath%20d%3D%22M144-136v-117q0-41%2021-72t55-48q66-31%20131-46%2064-16%20129-16%2024%200%2047%203%2024%202%2047%206v88l-47-6q-23-2-47-2-56%200-109%2012-54%2012-111%2039-12%206-20%2018t-8%2026v27h342v88H144Zm88-88h342-342Zm248-265q-73%200-121-48t-48-121q0-73%2048-121t121-48q73%200%20121%2048%2049%2048%2049%20121t-49%20121q-48%2048-121%2048Zm0-88q35%200%2058-23t23-58q0-35-23-58t-58-23q-35%200-58%2023t-23%2058q0%2035%2023%2058t58%2023Zm0-81ZM720-2v-198h-80v-240h239l-80%20160h80L720-2Z%22%2F%3E%3C%2Fsvg%3E";
+      await batteryImage.decode();
+      ctx.drawImage(batteryImage, sleepStatsIconX, 160, iconSize, iconSize);
+      ctx.fillText(sleepData.bodyBattery, sleepStatsIconX + iconSize + 10, 160 + (iconSize / 2));
+
+      // Respiration
+      const breathImage = new Image();
+      breathImage.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23bbb%22%20viewBox%3D%220%20-960%20960%20960%22%3E%3Cpath%20d%3D%22M164-109q-49%200-83-34t-34-82v-189l109-282q13-35%2044-55t69-20q48%200%2081%2034t33%2081v45h-89v-45q0-11-8-19-9-8-20-8-9%200-17%205-8%204-11%2012L136-399v174q0%2012%208%2020t20%208h160q12%200%2020-8t8-20v-71h88v71q0%2048-34%2082t-82%2034H164Zm632%200H636q-48%200-82-34t-34-82v-71h88v71q0%2012%208%2020t20%208h160q13%200%2020-8%208-8%208-20v-174L722-666q-3-8-11-12-8-5-17-5-12%200-20%208t-8%2019v45h-88v-45q0-47%2033-81t80-34q37%200%2069%2020t45%2055l108%20282v189q0%2048-34%2082t-83%2034ZM314-451Zm333%200Zm-167-42L376-389l-62-62%20122-122v-318h88v318l122%20122-62%2062-104-104Z%22%2F%3E%3C%2Fsvg%3E";
+      await breathImage.decode();
+      ctx.drawImage(breathImage, sleepStatsIconX, 220, iconSize, iconSize);
+      ctx.fillText(sleepData.breathRate, sleepStatsIconX + iconSize + 10, 220 + (iconSize / 2));
+
+      // Stress
+      const stressImage = new Image();
+      stressImage.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23bbb%22%20viewBox%3D%220%20-960%20960%20960%22%3E%3Cpath%20d%3D%22m297-450%20152-110-152-111-41%2056%2075%2055-75%2055%2041%2055Zm366%200%2042-55-76-55%2076-55-42-56-152%20111%20152%20110ZM420-271l60-60%2060%2060%2060-60%2039%2038%2049-48-88-88-60%2060-60-60-60%2060-60-60-87%2088%2048%2048%2039-38%2060%2060Zm60%20207q-86%200-162-33-76-32-132-89-57-56-89-132-33-76-33-162t33-162q32-76%2089-132%2056-57%20132-89%2076-33%20162-33t162%2032q76%2033%20132%2090%2057%2056%2090%20132%2032%2076%2032%20162t-32%20162q-33%2076-90%20132-56%2057-132%2089-76%2033-162%2033Zm0-416Zm0%20328q137%200%20232-96%2096-95%2096-232t-96-232q-95-96-232-96t-232%2096q-96%2095-96%20232t96%20232q95%2096%20232%2096Z%22%2F%3E%3C%2Fsvg%3E";
+      await stressImage.decode();
+      ctx.drawImage(stressImage, sleepStatsIconX, 280, iconSize, iconSize);
+      ctx.fillText(sleepData.stress, sleepStatsIconX + iconSize + 10, 280 + (iconSize / 2));
+
+      // Durations
+      // [label, value]
+      const durations = [
+         ["DEEP", sleepData.deepDuration],
+         ["LIGHT", sleepData.lightDuration],
+         ["REM", sleepData.remDuration],
+         ["AWAKE", sleepData.awakeDuration]
+      ];
+      const durationLabelY = 450;
+      const durationValueY = 500;
+      const durationWidth = (canvas.width - 90) / durations.length;
+
+      durations.forEach((durationPair, index) => {
+         const [label, duration] = durationPair;
+         const x = 45 + (durationWidth * index) + (durationWidth / 2);
+
+         ctx.textAlign = "center";
+         ctx.fillStyle = "#bbb";
+         ctx.font = "24px sans-serif";
+         ctx.fillText(label, x, durationLabelY);
+         ctx.fillStyle = "#f2f2f2";
+         ctx.font = "30px sans-serif";
+         ctx.fillText(duration, x, durationValueY);
+      });
+
+      // Sleep Graph
+      const graphBlob = new Blob([sleepData.graph], { type: "image/svg+xml" });
+      const graphUrl = URL.createObjectURL(graphBlob);
+      
+      const graphImage = new Image();
+      graphImage.src = graphUrl;
+      await graphImage.decode();
+      
+      const sleepGraphCanvas = document.createElement('canvas');
+      sleepGraphCanvas.width = 579;
+      sleepGraphCanvas.height = 25;
+      const sleepGraphContext = sleepGraphCanvas.getContext('2d');
+      sleepGraphContext.drawImage(graphImage, -81, -195);
+      
+      ctx.drawImage(sleepGraphCanvas, 45, 575);
+
+      return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+   }
+
+   function splitText(string, length = 25) {
+      const result = [""];
+      const splitString = string.split(" ");
+      splitString.forEach(split => {
+         const currentIndex = result.length - 1;
+         result[currentIndex] = result[currentIndex].trim();
+         let currentString = result[currentIndex];
+         if ((currentString + " " + split).length <= length) {
+            result[currentIndex] += " " + split;
+         } else {
+            result.push(split);
+         }
+      })
+      return result;
+   }
 
    const getElementsAsync = async (selector) => {
       return new Promise((resolve) => {
-         const interval = setInterval(() => {
-            const element = document.querySelectorAll(selector);
-            if (element) {
+         function _resolveElements() {
+            const elements = document.querySelectorAll(selector);
+            if (elements.length > 0) {
                clearInterval(interval);
-               resolve(element);
+               resolve(elements);
             }
-         }, 500);
+         }
+         const interval = setInterval(_resolveElements, 500);
+         _resolveElements();
       });
    };
 
    const getSleepDataAsync = async () => {
       return new Promise(async (resolve) => {
-         const scoreEl = (await getElementAsync(elementSelectors.score));
-         const dataFields = [...await getElementsAsync(elementSelectors.dataFields)];
+         const sleepMetrics = [...await getElementsAsync(elementSelectors.sleepMetrics)];
          const scoreFactors = [...await getElementsAsync(elementSelectors.scoreFactors)];
          resolve({
-            score: scoreEl.innerText,
+            score: (await getElementsAsync(elementSelectors.score))[0].innerText,
             duration: scoreFactors[0].innerText,
-            message: (await getElementAsync(elementSelectors.message)).innerText,
-            heartRate: dataFields.filter((f) => f.innerText.endsWith("bpm"))[0].innerText,
-            bodyBattery: dataFields.filter((f) => f.innerText.startsWith("+"))[0].innerText,
-            breathRate: dataFields.filter((f) => f.innerText.endsWith("brpm"))[0].innerText,
-            stress: scoreFactors.filter((f) => f.innerText.endsWith("avg"))[0].innerText,
+            message: (await getElementsAsync(elementSelectors.message))[0].innerText,
+            heartRate: sleepMetrics[1].innerText,
+            bodyBattery: sleepMetrics[2].innerText,
+            breathRate: sleepMetrics[5].innerText,
+            stress: scoreFactors[1].innerText,
             deepDuration: scoreFactors[2].innerText,
             lightDuration: scoreFactors[3].innerText,
             awakeDuration: scoreFactors[5].innerText.split("•")[0],
             remDuration: scoreFactors[4].innerText,
-            graph: (await getElementAsync(elementSelectors.graph)).outerHTML,
+            graph: (await getElementsAsync(elementSelectors.graph))[0].outerHTML,
          });
       });
    };
@@ -61,222 +189,46 @@
    const elementSelectors = {
       score: ".SleepScoreSummary_dailySleepScoreValue__GK7Te",
       scoreTitle: "h4",
-      dataFields: ".DataBlock_dataField__t4-ai",
+      sleepMetrics: ".SleepStats_sleepStatsContainer__qHHZ3 .DataBlock_dataField__t4-ai",
       scoreFactors: ".SleepScoreFactorCard_sleepTypeValues__1jbrw",
       message: ".SleepScoreSummary_shortFeedbackTitle__\\+S5P1",
       graph: ".highcharts-root",
    };
 
-   const scoreEl = await getElementAsync(elementSelectors.scoreTitle);
+   const setupShare = async () => {
+      if (!!document.getElementById("sleepShareBtn")) return;
 
-    const shareBtn = document.createElement("button");
-    shareBtn.id = "myShareBtn";
-    shareBtn.style = `background: #efefef;padding: 5px 10px;border-radius: 10px;float: right;`;
-    shareBtn.innerText = "Share";
-    scoreEl.insertAdjacentElement("beforeBegin", shareBtn);
+      const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle))[0];
 
-   shareBtn.addEventListener("click", async () => {
-       shareBtn.innerText = "...";
-      window.sleepData = await getSleepDataAsync();
+      const shareBtn = document.createElement("button");
+      shareBtn.id = "sleepShareBtn";
+      shareBtn.style = `background: #efefef;padding: 5px 10px;border-radius: 10px;float: right;`;
+      shareBtn.innerText = "Share";
+      scoreEl.insertAdjacentElement("beforeBegin", shareBtn);
 
-      const container = document.createElement("div");
-      document.body.appendChild(container);
-      const shadow = container.attachShadow({ mode: "open" });
-      window.sleepShadow = shadow;
-      const html = `<html lang="en">
+      shareBtn.addEventListener("click", async () => {
+         shareBtn.innerText = "...";
+         const sleepData = await getSleepDataAsync();
 
-<head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Sleep</title>
-   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-   <style>
-      * {
-          font-family: sans-serif;
-          font-size: 125%;
-      }
-      .sleepScoreContainer {
-         background: #212121;
-         color: #fafafa;
-         font-family: 'Roboto';
-         width: 600px;
-         height: 600px;
-      }
+         const canvas = document.createElement("canvas");
+         canvas.id = "canvas";
+         canvas.width = 660;
+         canvas.height = 660;
 
-      .sleepScoreContainer {
-         background: #212121;
-         display: flex;
-         flex-wrap: wrap;
-         justify-content: space-around;
-         align-content: space-around;
-         padding: 30px;
-      }
-
-      .sleepStatsSection {
-         flex-basis: 100%;
-         display: flex;
-         justify-content: space-between;
-      }
-
-      .sleepStatsSection p span:nth-child(1) {
-         display: block;
-         text-align: center;
-         color: #bbb;
-      }
-
-      .scoreSection {
-         display: flex;
-         flex-direction: column;
-         flex-basis: 50%;
-         align-items: center;
-         justify-content: space-evenly;
-      }
-
-      span#score {
-         font-size: 4em;
-         font-weight: bold;
-      }
-
-      .sleepStatsSection p span:nth-child(2) {
-         font-weight: bold;
-      }
-
-      .sleepStatsSection p {
-         line-height: 2;
-         text-align: center;
-      }
-
-      .moreStatsSection span {
-          vertical-align: middle;
-      }
-
-      svg {
-          vertical-align: middle;
-          transform: scale(1.5);
-          margin: 10px;
-      }
-
-      img {
-          width: 100%;
-      }
-   </style>
-</head>
-
-<body>
-   <div class="sleepScoreContainer">
-      <div class="scoreSection">
-         <span id="score">0</span>
-         <span id="duration">0h 0m</span>
-         <span id="message">More blank than ideal, too many errors.</span>
-      </div>
-      <div class="moreStatsSection">
-         <p>
-            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#bbb">
-               <path
-                  d="M645-840q100 0 167.5 74T880-590q0 18-2 35.5t-7 34.5H621l-68-102q-5-8-14-13t-19-5q-13 0-23.5 8T482-612l-54 162-35-52q-5-8-14-13t-19-5H89q-5-17-7-34.5T80-589q0-103 67-177t167-74q48 0 90.5 19t75.5 53q32-34 74.5-53t90.5-19ZM480-120q-18 0-34.5-6.5T416-146L148-415q-6-6-11-12t-10-13h211l68 102q5 8 14 13t19 5q13 0 24-8t15-20l54-162 34 52q6 8 15 13t19 5h232l-10 12-10 12-269 270q-13 13-29 19.5t-34 6.5Z">
-               </path>
-            </svg>
-            <span id="heartRate">0 bpm</span>
-         </p>
-         <p>
-            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#bbb">
-               <path
-                  d="M160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q20 0 40 1.5t40 4.5v274H160Zm320-320q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM720 0v-200h-80v-240h240l-80 160h80L720 0Z">
-               </path>
-            </svg>
-            <span id="bodyBattery">+ 0%</span>
-         </p>
-         <p>
-            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#bbb">
-               <path
-                  d="M200-120q-51 0-85.5-34.5T80-240v-167l105-281q12-33 42-52.5t65-19.5q26 0 49 13t38 35v112L277-498l43 42 120-120v-304h80v304l120 120 42-42-102-102v-112q15-22 38-35t49-13q35 0 64.5 19.5T774-688l105 281v167q0 51-35 85.5T759-120H639q-50 0-84.5-34.5T520-240v-80l15-127-55-56-56 56 16 127v80q0 51-35 85.5T320-120H200Z">
-               </path>
-            </svg>
-            <span id="breathRate">0 brpm</span>
-         </p>
-         <p>
-            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#bbb">
-               <path
-                  d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80ZM298-456l143-104-143-104-36 48 77 56-77 56 36 48Zm122 178 60-60 60 60 60-60 39 39 42-42-81-81-60 60-60-60-60 60-60-60-81 81 42 42 39-39 60 60Zm242-178 36-48-77-56 77-56-36-48-143 104 143 104Z">
-               </path>
-            </svg>
-            <span id="stress">0 avg</span>
-         </p>
-      </div>
-
-      <div class="sleepStatsSection">
-         <p>
-            <span>DEEP</span>
-            <span id="deepDuration">0h 0m</span>
-         </p>
-         <p>
-            <span>LIGHT</span>
-            <span id="lightDuration">0h 0m</span>
-         </p>
-         <p>
-            <span>REM</span>
-            <span id="remDuration">0h 0m</span>
-         </p>
-         <p>
-            <span>AWAKE</span>
-            <span id="awakeDuration">0h 00m</span>
-         </p>
-      </div>
-
-      <div id="graph"></div>
-   </div>
-</body>
-
-</html>`;
-      shadow.innerHTML = html;
-
-      const domToImageScript = document.createElement("script");
-      domToImageScript.src = "https://unpkg.com/dom-to-image@2.6.0/dist/dom-to-image.min.js";
-      domToImageScript.addEventListener("load", () => {
-         const imageGeneratorScript = document.createElement("script");
-         imageGeneratorScript.type = "module";
-         imageGeneratorScript.innerHTML = `
-      sleepShadow.getElementById("score").innerText = sleepData.score;
-      sleepShadow.getElementById("duration").innerText = sleepData.duration;
-      sleepShadow.getElementById("message").innerText = sleepData.message;
-      sleepShadow.getElementById("heartRate").innerText = sleepData.heartRate;
-      sleepShadow.getElementById("bodyBattery").innerText = sleepData.bodyBattery;
-      sleepShadow.getElementById("breathRate").innerText = sleepData.breathRate;
-      sleepShadow.getElementById("stress").innerText = sleepData.stress;
-      sleepShadow.getElementById("deepDuration").innerText = sleepData.deepDuration;
-      sleepShadow.getElementById("lightDuration").innerText = sleepData.lightDuration;
-      sleepShadow.getElementById("remDuration").innerText = sleepData.remDuration;
-      sleepShadow.getElementById("awakeDuration").innerText = sleepData.awakeDuration;
-
-      let graph = sleepShadow.getElementById("graph");
-
-      let image = document.createElement("img");
-      image.src = \`data:image/svg+xml;base64,\${btoa(sleepData.graph)}\`;
-      image.addEventListener("load", async () => {
-            let canvas = document.createElement("canvas");
-            graph.appendChild(canvas);
-            canvas.width = 741 - 162;
-            canvas.height = 25;
-
-            let context = canvas.getContext("2d");
-            context.drawImage(image, -81, -195);
-
-            let strip = canvas.toDataURL("image/png");
-            graph.innerHTML = \`<img src="\${strip}" />\`;
-
-            let blob = await domtoimage.toBlob(sleepShadow.querySelector(".sleepScoreContainer"));
-            await navigator.clipboard.write([
-              new ClipboardItem({ [blob.type]: blob })
-            ]);
-            const sb = document.getElementById("myShareBtn");
-            sb.innerText = "Copied";
-            sb.style.background = "#4CAF50";
-      });`;
-
-         shadow.appendChild(imageGeneratorScript);
+         const blob = await generateImage(canvas, sleepData);
+         await navigator.clipboard.write([
+            new ClipboardItem({ [blob.type]: blob })
+         ]);
+         shareBtn.innerText = "Copied";
+         shareBtn.style.background = "#4CAF50";
       });
-      shadow.appendChild(domToImageScript);
-   });
+   };
+
+   let currentURL = "";
+   setInterval(() => {
+      if (location.href !== currentURL) {
+         setupShare();
+         currentURL = location.href;
+      }
+   }, 500);
 })();
