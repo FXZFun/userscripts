@@ -123,7 +123,6 @@
       const graphImage = new Image();
       graphImage.src = graphUrl;
       await graphImage.decode();
-      console.log(graphImage.naturalWidth, graphImage.naturalHeight);
       
       ctx.drawImage(graphImage, 81, 195, graphImage.naturalWidth - 162, 25, 45, 575, 579, 25);
 
