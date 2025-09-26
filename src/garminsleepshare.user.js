@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.4
+// @version      0.9.5
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/*
@@ -192,7 +192,7 @@
    const setupShare = async () => {
       if (!!document.getElementById("sleepShareBtn")) return;
 
-      const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle))[0];
+      const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle)).filter(h4 => h4.innerText = "Sleep Score")[0];
 
       const shareBtn = document.createElement("button");
       shareBtn.id = "sleepShareBtn";
