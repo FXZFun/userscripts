@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.6
+// @version      0.9.7
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/*
@@ -12,7 +12,12 @@
 (async function () {
    "use strict";
 
-   async function generateImage(canvas, sleepData) {
+   async function generateImage(sleepData, asBlob=true) {
+      const canvas = document.createElement("canvas");
+      canvas.id = "canvas";
+      canvas.width = 660;
+      canvas.height = 660;
+
       const ctx = canvas.getContext("2d");
 
       ctx.fillStyle = "#212121";
@@ -119,14 +124,14 @@
       // Sleep Graph
       const graphBlob = new Blob([sleepData.graph], { type: "image/svg+xml" });
       const graphUrl = URL.createObjectURL(graphBlob);
-      
+
       const graphImage = new Image();
       graphImage.src = graphUrl;
       await graphImage.decode();
-      
+
       ctx.drawImage(graphImage, 81, 195, graphImage.naturalWidth - 162, 25, 45, 575, 579, 25);
 
-      return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      return await new Promise(resolve => asBlob ? canvas.toBlob(resolve, "image/png") : canvas.toDataURL("image/png"));
    }
 
    function splitText(string, length = 25) {
@@ -194,6 +199,12 @@
 
       const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle))[0];
 
+      if ("Android" in window) {
+          const sleepData = await getSleepDataAsync();
+          const url = await generateImage(sleepData, false);
+          Android.shareSleepScore(url);
+      }
+
       const shareBtn = document.createElement("button");
       shareBtn.id = "sleepShareBtn";
       shareBtn.style = `background: #efefef;padding: 5px 10px;border-radius: 10px;float: right;`;
@@ -203,13 +214,8 @@
       shareBtn.addEventListener("click", async () => {
          shareBtn.innerText = "...";
          const sleepData = await getSleepDataAsync();
+         const blob = await generateImage(sleepData);
 
-         const canvas = document.createElement("canvas");
-         canvas.id = "canvas";
-         canvas.width = 660;
-         canvas.height = 660;
-
-         const blob = await generateImage(canvas, sleepData);
          await navigator.clipboard.write([
             new ClipboardItem({ [blob.type]: blob })
          ]);
