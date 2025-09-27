@@ -17,7 +17,7 @@
       canvas.id = "canvas";
       canvas.width = 660;
       canvas.height = 660;
-
+      console.log("Created canvas");
       const ctx = canvas.getContext("2d");
 
       ctx.fillStyle = "#212121";
@@ -39,7 +39,7 @@
       ctx.fillText(prettyDateString, canvas.width - 10, 10);
 
       const mainSleepStatsArea = (canvas.width / 3) * 2;
-
+      console.log("Main sleep stats area:");
       // Overall Score
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
@@ -95,7 +95,7 @@
       await stressImage.decode();
       ctx.drawImage(stressImage, sleepStatsIconX, 280, iconSize, iconSize);
       ctx.fillText(sleepData.stress, sleepStatsIconX + iconSize + 10, 280 + (iconSize / 2));
-
+      console.log("Added sleep metrics");
       // Durations
       // [label, value]
       const durations = [
@@ -120,7 +120,7 @@
          ctx.font = "30px sans-serif";
          ctx.fillText(duration, x, durationValueY);
       });
-
+      console.log("Added durations");
       // Sleep Graph
       const graphBlob = new Blob([sleepData.graph], { type: "image/svg+xml" });
       const graphUrl = URL.createObjectURL(graphBlob);
@@ -128,9 +128,9 @@
       const graphImage = new Image();
       graphImage.src = graphUrl;
       await graphImage.decode();
-
+      console.log("Adding graph");
       ctx.drawImage(graphImage, 81, 195, graphImage.naturalWidth - 162, 25, 45, 575, 579, 25);
-
+      console.log("Added graph");
       return await new Promise(resolve => asBlob ? canvas.toBlob(resolve, "image/png") : canvas.toDataURL("image/png"));
    }
 
