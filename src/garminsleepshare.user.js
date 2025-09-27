@@ -131,7 +131,11 @@
       console.log("Adding graph");
       ctx.drawImage(graphImage, 81, 195, graphImage.naturalWidth - 162, 25, 45, 575, 579, 25);
       console.log("Added graph");
-      return await new Promise(resolve => asBlob ? canvas.toBlob(resolve, "image/png") : resolve(canvas.toDataURL("image/png")));
+      if (asBlob) {
+        return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      } else {
+        return canvas.toDataURL("image/png");
+      }
    }
 
    function splitText(string, length = 25) {
