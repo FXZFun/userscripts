@@ -182,7 +182,7 @@
 
    const elementSelectors = {
       score: ".SleepScoreSummary_dailySleepScoreValue__GK7Te",
-      scoreTitle: "h4",
+      scoreTitle: ".SleepPage_sleepScoreTabContainer__GseoL h4",
       sleepMetrics: ".SleepStats_sleepStatsContainer__qHHZ3 .DataBlock_dataField__t4-ai",
       scoreFactors: ".SleepScoreFactorCard_sleepTypeValues__1jbrw",
       message: ".SleepScoreSummary_shortFeedbackTitle__\\+S5P1",
@@ -192,7 +192,7 @@
    const setupShare = async () => {
       if (!!document.getElementById("sleepShareBtn")) return;
 
-      const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle)).filter(h4 => h4.innerText = "Sleep Score")[0];
+      const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle))[0];
 
       const shareBtn = document.createElement("button");
       shareBtn.id = "sleepShareBtn";
