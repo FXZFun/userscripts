@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.7
+// @version      0.9.8
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/*
@@ -131,7 +131,11 @@
 
       ctx.drawImage(graphImage, 81, 195, graphImage.naturalWidth - 162, 25, 45, 575, 579, 25);
 
-      return await new Promise(resolve => asBlob ? canvas.toBlob(resolve, "image/png") : canvas.toDataURL("image/png"));
+      if (asBlob) {
+        return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      } else {
+        return canvas.toDataURL("image/png");
+      }
    }
 
    function splitText(string, length = 25) {
@@ -198,30 +202,35 @@
       if (!!document.getElementById("sleepShareBtn")) return;
 
       const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle))[0];
-
-      if ("Android" in window) {
-          const sleepData = await getSleepDataAsync();
-          const url = await generateImage(sleepData, false);
-          Android.shareSleepScore(url);
-      }
-
       const shareBtn = document.createElement("button");
       shareBtn.id = "sleepShareBtn";
       shareBtn.style = `background: #efefef;padding: 5px 10px;border-radius: 10px;float: right;`;
       shareBtn.innerText = "Share";
       scoreEl.insertAdjacentElement("beforeBegin", shareBtn);
 
+      const isOnAndroid = "Android" in window;
+
       shareBtn.addEventListener("click", async () => {
          shareBtn.innerText = "...";
          const sleepData = await getSleepDataAsync();
-         const blob = await generateImage(sleepData);
+         const image = await generateImage(sleepData, !isOnAndroid);
 
-         await navigator.clipboard.write([
-            new ClipboardItem({ [blob.type]: blob })
-         ]);
+         if (isOnAndroid) {
+            Android.shareSleepScore(image);
+         } else {
+            await navigator.clipboard.write([
+               new ClipboardItem({ [image.type]: image })
+            ]);
+         }
          shareBtn.innerText = "Copied";
          shareBtn.style.background = "#4CAF50";
       });
+
+      if (isOnAndroid) {
+          const sleepData = await getSleepDataAsync();
+          const url = await generateImage(sleepData, false);
+          Android.shareSleepScore(url);
+      }
    };
 
    let currentURL = "";
