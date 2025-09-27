@@ -218,6 +218,7 @@
       });
 
       const isOnAndroid = "Android" in window;
+      console.log("isOnAndroid", isOnAndroid);
       if (isOnAndroid) {
           const sleepData = await getSleepDataAsync();
           const url = await generateImage(sleepData, false);
@@ -225,6 +226,7 @@
       }
    };
 
+   console.log("Garmin Sleep Share script loaded");
    let currentURL = "";
    setInterval(() => {
       if (location.href !== currentURL) {
