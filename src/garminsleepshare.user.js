@@ -222,7 +222,9 @@
       if (isOnAndroid) {
           const sleepData = await getSleepDataAsync();
           const url = await generateImage(sleepData, false);
+          console.log("launching Android share");
           Android.shareSleepScore(url);
+          console.log("Shared to Android");
       }
    };
 
