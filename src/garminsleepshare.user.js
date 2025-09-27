@@ -220,9 +220,11 @@
       const isOnAndroid = "Android" in window;
       console.log("isOnAndroid", isOnAndroid);
       if (isOnAndroid) {
+         console.log("Collecting sleep data...")
           const sleepData = await getSleepDataAsync();
+          console.log("Generating image...");
           const url = await generateImage(sleepData, false);
-          console.log("launching Android share");
+          console.log("Launching Android share...");
           Android.shareSleepScore(url);
           console.log("Shared to Android");
       }
