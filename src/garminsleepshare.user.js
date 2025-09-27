@@ -199,12 +199,6 @@
 
       const scoreEl = (await getElementsAsync(elementSelectors.scoreTitle))[0];
 
-      if ("Android" in window) {
-          const sleepData = await getSleepDataAsync();
-          const url = await generateImage(sleepData, false);
-          Android.shareSleepScore(url);
-      }
-
       const shareBtn = document.createElement("button");
       shareBtn.id = "sleepShareBtn";
       shareBtn.style = `background: #efefef;padding: 5px 10px;border-radius: 10px;float: right;`;
@@ -222,6 +216,13 @@
          shareBtn.innerText = "Copied";
          shareBtn.style.background = "#4CAF50";
       });
+
+      const isOnAndroid = "Android" in window;
+      if (isOnAndroid) {
+          const sleepData = await getSleepDataAsync();
+          const url = await generateImage(sleepData, false);
+          Android.shareSleepScore(url);
+      }
    };
 
    let currentURL = "";
