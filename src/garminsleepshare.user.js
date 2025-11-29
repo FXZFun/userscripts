@@ -158,6 +158,7 @@
       return new Promise((resolve) => {
          function _resolveElements() {
             const elements = document.querySelectorAll(selector);
+            elements = [...elements].filter(e => !e.innerText.includes('_'));
             if (elements.length > 0) {
                clearInterval(interval);
                resolve(elements);
