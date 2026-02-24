@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME COL Basemap
 // @namespace    https://fxzfun.com/
-// @version      3.1.4
+// @version      3.1.5
 // @description  Adds aerials from the COL GIS as a basemap for WME
 // @author       FXZFun
 // @match        https://*.waze.com/*/editor*
@@ -41,7 +41,6 @@
     const NAME = "WME COL Basemap";
     const pageWindow = unsafeWindow ?? window;
 
-    const policy = trustedTypes?.createPolicy('wmecolbasemapPolicy', { createHTML: (input) => input });
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     const getMostRecentDate = () => localStorage.getItem(STORAGE_MOST_RECENT_DATE_KEY)?.replaceAll(".", "") ?? "20230531";
     const createURL = (date, ticket) => "https://us0.nearmap.com/maps/?z=${z}&x=${x}&y=${y}&nml=V&version=2&nmd=" + date + "&ticket=" + ticket;
@@ -150,8 +149,7 @@
 
         const div = document.createElement("div");
         div.id = ELEMENT_BUBBLE_ID;
-        div.innerHTML = policy.createHTML(
-            `<style>
+        div.innerHTML = `<style>
                  .wmecolbasemap { position: absolute; top: 40px; left: 60px; background-color: #fafafa; padding: 0.5em 0.75em; border-radius: 2em; }
                  .wmecolbasemap i { padding: 0.5em; vertical-align: middle; }
                  .wmecolbasemap #select-wrapper { display: none; }
@@ -164,7 +162,7 @@
                      ${dates.map(d => "<wz-option value=" + d + ">" + d + "</wz-option>").join("")}
                  </wz-select>
                  <i id="${ELEMENT_REFRESH_ID}" class="w-icon w-icon-refresh"></i>
-             </div>`);
+             </div>`;
         document.querySelector(".olMap").appendChild(div);
 
         document.getElementById(ELEMENT_POPUP_CHECKBOX_ID).addEventListener("click", toggleBasemap);
@@ -268,8 +266,7 @@
         tabLabel.title = NAME;
 
         tabPane.style = "display: flex; flex-direction: column; height: 100%; gap: 5px;";
-        tabPane.innerHTML = policy.createHTML(`
-            <h3>WME COL Basemap <small>v3.1</small></h3>
+        tabPane.innerHTML = `<h3>WME COL Basemap <small>v3.1</small></h3>
             <p>provided by <a href="https://maps.cityoflewisville.com" target="_blank" id="${ELEMENT_SETTINGS_COL_LINK_ID}">maps.cityoflewisville.com</a></p>
 
             <b style="margin-top: 20px">Options</b>
@@ -291,7 +288,7 @@
 
             <p style="margin-top: 20px;"><b>Note:</b> please do not use as your default basemap - only enable when needed, as we do not want to abuse the service provided by the City of Lewisville GIS.</p>
             <em>Aerial Imagery © Nearmap - <a href="https://nearmap.com" target="_blank">nearmap.com</a></em>
-        `);
+        `;
 
         await W.userscripts.waitForElementConnected(tabPane);
 
