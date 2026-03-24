@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.9
+// @version      0.9.10
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/*
@@ -172,6 +172,17 @@
       return new Promise(async (resolve) => {
          const sleepMetrics = [...await getElementsAsync(elementSelectors.sleepMetrics)];
          const scoreFactors = [...await getElementsAsync(elementSelectors.scoreFactors)];
+
+         const sleepGraph = (await getElementsAsync(elementSelectors.graph))[0];
+         let variableStyles = "";
+         const styles = document.documentElement.computedStyleMap();
+         styles.forEach((value, key) => {
+            if (key.startsWith('--')) {
+               variableStyles += `${key}: ${value.toString()};\n`;
+            }
+         });
+         sleepGraph.style += variableStyles;
+         
          resolve({
             score: (await getElementsAsync(elementSelectors.score))[0].innerText,
             duration: scoreFactors[0].innerText,
@@ -184,7 +195,7 @@
             lightDuration: scoreFactors[3].innerText,
             awakeDuration: scoreFactors[5].innerText.split("•")[0],
             remDuration: scoreFactors[4].innerText,
-            graph: (await getElementsAsync(elementSelectors.graph))[0].outerHTML,
+            graph: sleepGraph.outerHTML,
          });
       });
    };
