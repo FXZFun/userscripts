@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Garmin Sleep Share
 // @namespace    https://fxzfun.com/
-// @version      0.9.10
+// @version      1.0.0
 // @description  Share your sleep score as a single photo instead of multiple screenshots of the app
 // @author       FXZFun, Dubster
 // @match        https://connect.garmin.com/*
