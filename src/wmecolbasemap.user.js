@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME COL Basemap
 // @namespace    https://fxzfun.com/
-// @version      4.0.0
+// @version      4.0.1
 // @description  Adds aerials from the COL GIS as a basemap for WME
 // @author       FXZFun
 // @include      https://beta.waze.com/*
@@ -35,7 +35,8 @@
         bubblePosition: State.bubblePosition,
         dates: State.dates,
         shortcut: State.shortcut,
-        ticket: State.ticket
+        ticket: State.ticket,
+        ticketExpiry: State.ticketExpiry
     }));
     const loadState = () => Object.assign(State, JSON.parse(localStorage.getItem(SCRIPT_ID) || '{}'));
 
@@ -107,7 +108,7 @@
 
             await this.initAsync(sdk);
 
-            UI.syncAll();
+            UI.syncAll(sdk);
         },
 
         async toggleAsync(sdk) {
@@ -115,7 +116,7 @@
 
             State.enabled = !State.enabled;
             sdk.Map.setLayerVisibility({ layerName: SCRIPT_ID, visibility: State.enabled });
-            UI.syncAll();
+            UI.syncAll(sdk);
         },
 
         async enableAsync(sdk) {
@@ -163,7 +164,7 @@
             select.value = State.date;
         },
 
-        syncAll() {
+        syncAll(sdk) {
             // Power icons
             document.querySelectorAll('.col-power').forEach(el => { el.style.color = State.enabled ? '#00bd00' : '#bdbdbd'; });
 
@@ -171,6 +172,8 @@
             document.querySelectorAll('.col-date-select').forEach(el => {
                 if (el.value !== State.date) el.value = State.date;
             });
+
+            sdk.LayerSwitcher.setLayerCheckboxChecked({ isChecked: State.enabled, name: SCRIPT_NAME });
         },
 
         createBubble(sdk) {
@@ -242,12 +245,12 @@
             });
 
             document.querySelector('#map').appendChild(el);
-            this.syncAll();
         },
 
         updateBubble(sdk) {
             document.getElementById('colBubble')?.remove();
             this.createBubble(sdk);
+            this.syncAll(sdk);
         },
 
         async initSidebarAsync(sdk) {
@@ -308,56 +311,59 @@
                 await API.refreshAsync();
                 root.querySelectorAll('.col-date-select').forEach(s => this.populateDates(s));
                 await Layer.setDateAsync(sdk, State.date);
-                this.syncAll();
+                this.syncAll(sdk);
             };
+        },
 
-            this.syncAll();
-        }
-    };
+        addShortcut(sdk) {
+            const savedKeys = State.shortcut;
 
-    const addShortcut = (sdk) => {
-        const savedKeys = State.shortcut;
+            if (savedKeys) {
+                try {
+                    sdk.Shortcuts.deleteShortcut({ shortcutId: SCRIPT_ID });
+                } catch (e) { }
+            }
 
-        if (savedKeys) {
-            try {
-                sdk.Shortcuts.deleteShortcut({ shortcutId: SCRIPT_ID });
-            } catch (e) { }
-        }
+            sdk.Shortcuts.createShortcut({
+                shortcutId: SCRIPT_ID,
+                description: 'Toggle COL Basemap layer',
+                shortcutKeys: savedKeys,
+                callback: async () => {
+                    const convertShortcut = (shortcut) => {
+                        const [m, k] = shortcut.split(',').map(Number);
 
-        sdk.Shortcuts.createShortcut({
-            shortcutId: SCRIPT_ID,
-            description: 'Toggle COL Basemap layer',
-            shortcutKeys: savedKeys,
-            callback: async () => {
-                const convertShortcut = (shortcut) => {
-                    const [m, k] = shortcut.split(',').map(Number);
+                        const modifiers =
+                              (m & 1 ? 'C' : '') +
+                              (m & 2 ? 'S' : '') +
+                              (m & 4 ? 'A' : '');
 
-                    const modifiers =
-                        (m & 1 ? 'C' : '') +
-                        (m & 2 ? 'S' : '') +
-                        (m & 4 ? 'A' : '');
+                        const key =
+                              (k >= 48 && k <= 57) || (k >= 65 && k <= 90)
+                        ? String.fromCharCode(k).toLowerCase()
+                        : k;
 
-                    const key =
-                        (k >= 48 && k <= 57) || (k >= 65 && k <= 90)
-                            ? String.fromCharCode(k).toLowerCase()
-                            : k;
+                        return modifiers ? `${modifiers}+${key}` : String(key);
+                    };
 
-                    return modifiers ? `${modifiers}+${key}` : String(key);
-                };
-
-                const shortcut = sdk.Shortcuts
+                    const shortcut = sdk.Shortcuts
                     .getAllShortcuts()
                     .find(s => s.shortcutId === SCRIPT_ID);
 
-                if (shortcut?.shortcutKeys) {
-                    State.shortcut = convertShortcut(shortcut.shortcutKeys);
-                    saveState();
-                }
+                    if (shortcut?.shortcutKeys) {
+                        State.shortcut = convertShortcut(shortcut.shortcutKeys);
+                        saveState();
+                    }
 
-                await Layer.toggleAsync(sdk);
-            }
-        });
-    }
+                    await Layer.toggleAsync(sdk);
+                }
+            });
+        },
+
+        addLayerToggle(sdk) {
+            sdk.LayerSwitcher.addLayerCheckbox({ name: SCRIPT_NAME });
+            sdk.Events.on({ eventName: 'wme-layer-checkbox-toggled', eventHandler: async () => await Layer.toggleAsync(sdk) });
+        }
+    };
 
     try {
         const context = 'unsafeWindow' in window ? window.unsafeWindow : window;
@@ -375,9 +381,11 @@
         await Layer.initAsync(sdk);
         await UI.initSidebarAsync(sdk);
         UI.createBubble(sdk);
+        UI.addShortcut(sdk);
+        UI.addLayerToggle(sdk);
+        UI.syncAll(sdk);
 
         Layer.disableWhileMoving(sdk);
-        addShortcut(sdk);
 
         console.log(`${SCRIPT_NAME}: Ready`);
     } catch (e) {
