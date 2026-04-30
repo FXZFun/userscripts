@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME COL Basemap
 // @namespace    https://fxzfun.com/
-// @version      4.0.1
+// @version      4.0.2
 // @description  Adds aerials from the COL GIS as a basemap for WME
 // @author       FXZFun
 // @include      https://beta.waze.com/*
@@ -115,7 +115,9 @@
             if (API.shouldRefresh()) await API.refreshAsync();
 
             State.enabled = !State.enabled;
-            sdk.Map.setLayerVisibility({ layerName: SCRIPT_ID, visibility: State.enabled });
+            State.enabled ? await this.initAsync(sdk)
+                          : sdk.Map.removeLayer({ layerName: SCRIPT_ID });
+
             UI.syncAll(sdk);
         },
 
@@ -378,7 +380,6 @@
         if (API.shouldRefresh() || !State.dates.length) await API.refreshAsync();
         State.date = State.date || State.dates[0];
 
-        await Layer.initAsync(sdk);
         await UI.initSidebarAsync(sdk);
         UI.createBubble(sdk);
         UI.addShortcut(sdk);
