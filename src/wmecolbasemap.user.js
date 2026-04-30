@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME COL Basemap
 // @namespace    https://fxzfun.com/
-// @version      4.0.2
+// @version      4.0.3
 // @description  Adds aerials from the COL GIS as a basemap for WME
 // @author       FXZFun
 // @include      https://beta.waze.com/*
@@ -13,6 +13,8 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=waze.com
 // @grant        GM_xmlhttpRequest
 // @license      GNU GPLv3
+// @downloadURL https://update.greasyfork.org/scripts/453822/WME%20COL%20Basemap.user.js
+// @updateURL https://update.greasyfork.org/scripts/453822/WME%20COL%20Basemap.meta.js
 // ==/UserScript==
 
 (async function () {
@@ -386,7 +388,16 @@
         UI.addLayerToggle(sdk);
         UI.syncAll(sdk);
 
-        Layer.disableWhileMoving(sdk);
+        // TODO: Find solutions for these bugs
+        // - Window resizes and panels opening trigger the map-move event, but not the move-end event, so disabling while moving doesn't work consistently
+        // - After the selection changes, the layer zIndex is set to the top after some short amount of time
+
+        // Layer.disableWhileMoving(sdk);
+        sdk.Events.on({ eventName: 'wme-selection-changed', eventHandler: () => {
+            setTimeout(() => {
+                sdk.Map.setLayerZIndex({ layerName: SCRIPT_ID, zIndex: sdk.Map.getLayerZIndex({ layerName: 'satellite_pleiades_ortho_rgb' }) + 1 });
+            }, 1000);
+        }});
 
         console.log(`${SCRIPT_NAME}: Ready`);
     } catch (e) {
