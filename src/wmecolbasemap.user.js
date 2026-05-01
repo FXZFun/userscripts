@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME COL Basemap
 // @namespace    https://fxzfun.com/
-// @version      4.0.3
+// @version      4.0.4
 // @description  Adds aerials from the COL GIS as a basemap for WME
 // @author       FXZFun
 // @include      https://beta.waze.com/*
@@ -79,28 +79,24 @@
     };
 
     const Layer = {
-        buildOptions(date, ticket) {
-            return {
-                tileWidth: 256,
-                tileHeight: 256,
-                url: {
-                    servers: ["https://us0.nearmap.com"],
-                    fileName: "maps/?x=${x}&y=${y}&z=${z}",
-                    params: { nml: "V", version: 2, nmd: date, ticket }
-                }
-            };
-        },
-
         async initAsync(sdk) {
             const ticket = await API.getTicketAsync();
 
             sdk.Map.addTileLayer({
                 layerName: SCRIPT_ID,
-                layerOptions: this.buildOptions(State.date, ticket)
+                layerOptions: {
+                    tileWidth: 256,
+                    tileHeight: 256,
+                    url: {
+                        servers: ["https://us0.nearmap.com"],
+                        fileName: "maps/?x=${x}&y=${y}&z=${z}",
+                        params: { nml: "V", version: 2, nmd: State.date, ticket }
+                    }
+                }
             });
 
             sdk.Map.setLayerVisibility({ layerName: SCRIPT_ID, visibility: State.enabled });
-            sdk.Map.setLayerZIndex({ layerName: SCRIPT_ID, zIndex: sdk.Map.getLayerZIndex({ layerName: 'satellite_pleiades_ortho_rgb' }) + 1 });
+            this.setZIndex(sdk);
         },
 
         async setDateAsync(sdk, date) {
@@ -113,12 +109,17 @@
             UI.syncAll(sdk);
         },
 
+        setZIndex(sdk) {
+            if (State.enabled) {
+                sdk.Map.setLayerZIndex({ layerName: SCRIPT_ID, zIndex: sdk.Map.getLayerZIndex({ layerName: 'satellite_pleiades_ortho_rgb' }) + 1 });
+            }
+        },
+
         async toggleAsync(sdk) {
             if (API.shouldRefresh()) await API.refreshAsync();
 
             State.enabled = !State.enabled;
-            State.enabled ? await this.initAsync(sdk)
-                          : sdk.Map.removeLayer({ layerName: SCRIPT_ID });
+            State.enabled ? await this.initAsync(sdk) : sdk.Map.removeLayer({ layerName: SCRIPT_ID });
 
             UI.syncAll(sdk);
         },
@@ -388,16 +389,10 @@
         UI.addLayerToggle(sdk);
         UI.syncAll(sdk);
 
-        // TODO: Find solutions for these bugs
-        // - Window resizes and panels opening trigger the map-move event, but not the move-end event, so disabling while moving doesn't work consistently
-        // - After the selection changes, the layer zIndex is set to the top after some short amount of time
-
+        // TODO: Window resizes and panels opening trigger the map-move event, but not the move-end event, so disabling while moving doesn't work consistently
         // Layer.disableWhileMoving(sdk);
-        sdk.Events.on({ eventName: 'wme-selection-changed', eventHandler: () => {
-            setTimeout(() => {
-                sdk.Map.setLayerZIndex({ layerName: SCRIPT_ID, zIndex: sdk.Map.getLayerZIndex({ layerName: 'satellite_pleiades_ortho_rgb' }) + 1 });
-            }, 1000);
-        }});
+
+        sdk.Events.on({ eventName: 'wme-map-layer-removed', eventHandler: () => Layer.setZIndex(sdk) });
 
         console.log(`${SCRIPT_NAME}: Ready`);
     } catch (e) {
