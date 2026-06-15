@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Realtor Addons
 // @namespace    https://fxzfun.com/userscripts
-// @version      1.0.2
+// @version      1.0.3
 // @description  Provides additional functionality to Realtor.com and other real estate sites, adding crime map overlay, distance to HEB, and closest WELS/ELS church
 // @author       FXZFun
 // @match        https://www.realtor.com/realestateandhomes-search/*
@@ -139,10 +139,10 @@
 
             const iframe = document.createElement("iframe");
             const a = document.createElement("a");
-            a.href = `https://crimegrade.org/violent-crime-conroe-tx/?lat=${lat}&lng=${lng}/`;
+            a.href = `https://crimegrade.org/violent-crime-texas/?lat=${lat}&lng=${lng}/`;
             a.target = "_blank";
             a.style ="width: 100%; display: block";
-            iframe.src = `https://crimegrade.org/violent-crime-conroe-tx/?lat=${lat}&lng=${lng}&fullscreen=true/`;
+            iframe.src = `https://crimegrade.org/violent-crime-texas/?lat=${lat}&lng=${lng}&z=13&fullscreen=true/`;
             iframe.style = "height: 150px;width: 100%;border-radius: 6px;pointer-events: none;";
             a.appendChild(iframe);
 
@@ -160,7 +160,7 @@
             const latitude = document.querySelector("meta[property='place:location:latitude']").content;
             const longitude = document.querySelector("meta[property='place:location:longitude']").content;
 
-            let summary = document.querySelector("[data-testid='ldp-home-facts']").parentElement.parentElement;
+            let summary = document.querySelector("[data-testid='ldp-highlights']");
             let container = document.createElement("div");
 
             summary.insertAdjacentElement("afterend", container);
@@ -168,8 +168,7 @@
             container.id = 'hsd';
             container.innerHTML = `
         <style>
-            .listing-summary-action { min-height: 0 !important; }
-            #hsd { margin-bottom: 20px } #hsd ul { list-style: none; padding: 0; width: 50%;} #hsd li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 10px; } #hsd p { margin: 0; }
+            #hsd ul { list-style: none; padding: 0; } #hsd li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 10px; } #hsd p { margin: 0; }
         </style>
         <ul>
             ${addClosestChurch(latitude, longitude)}
@@ -189,17 +188,11 @@
                 let lastUrl;
                 const iframe = document.createElement("iframe");
                 pageWindow.iframee = iframe;
-                iframe.src = "https://crimegrade.org/violent-crime-conroe-tx/?fullscreen=true&removeLayers=true&noChurches=true";
-                iframe.style = `display: block; position: absolute; width: 100%; height: 100%; opacity: 0.5; pointer-events: none;`;
-                let mapEl = document.querySelector(".map-inner");
-                let i = setInterval(() => {
-                    if (!!mapEl) {
-                        clearInterval(i);
-                        mapEl.insertAdjacentElement("afterEnd", iframe);
-                    } else {
-                        mapEl = document.querySelector(".map-inner");
-                    }
-                }, 500);
+                iframe.src = "https://crimegrade.org/violent-crime-texas/?fullscreen=true&removeLayers=true&noChurches=true";
+                iframe.style = `display: block; position: absolute; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; z-index: 1;`;
+
+                let mapEl = await waitForElement("div[aria-roledescription=map]");
+                mapEl.insertAdjacentElement("afterEnd", iframe);
 
                 let oldPushState = history.pushState;
                 history.pushState = function pushState() {
@@ -236,8 +229,8 @@
 
                 setTimeout(() => {
                     let pos = JSON.parse(`[${new URLSearchParams(location.search).get("pos")}]`);
-                    iframe.contentWindow.postMessage({"sender": "realtor addons", "message": pos}, "*");
-                }, 8000);
+                    iframe.contentWindow?.postMessage({"sender": "realtor addons", "message": pos}, "*");
+                }, 5000);
             }
             else if (location.hostname.endsWith('newhomesource.com')) {
                 console.log("Realtor Addons: running crime overlay");
@@ -245,7 +238,7 @@
                 let lastUrl;
                 const iframe = document.createElement("iframe");
                 pageWindow.iframee = iframe;
-                iframe.src = "https://crimegrade.org/violent-crime-conroe-tx/?fullscreen=true&removeLayers=true&noChurches=true";
+                iframe.src = "https://crimegrade.org/violent-crime-texas/?fullscreen=true&removeLayers=true&noChurches=true";
                 iframe.style = `display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; z-index: 999;`;
                 let mapEl = document.querySelector(".map");
                 let i = setInterval(() => {
