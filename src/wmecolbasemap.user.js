@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME COL Basemap
 // @namespace    https://fxzfun.com/
-// @version      4.0.4
+// @version      4.0.5
 // @description  Adds aerials from the COL GIS as a basemap for WME
 // @author       FXZFun
 // @include      https://beta.waze.com/*
@@ -21,6 +21,7 @@
 
     const SCRIPT_NAME = GM_info.script.name;
     const SCRIPT_ID = SCRIPT_NAME.replaceAll(' ', '').toLowerCase();
+    const HOUR = 1000 * 60 * 60;
 
     const State = {
         enabled: false,
@@ -61,8 +62,8 @@
             State.ticket = data.ticket;
             State.dates = JSON.parse(data.aerialdates).map(d => d.date.replaceAll('.', ''));
             State.date = State.date || State.dates[0];
-            // ticket expires 2 days after being issued
-            State.ticketExpiry = new Date().getTime() + (2 * (1000 * 60 * 60 * 24));
+            // ticket expires 2 hours after being issued
+            State.ticketExpiry = new Date().getTime() + (2 * HOUR);
 
             saveState();
         },
@@ -73,8 +74,8 @@
         },
 
         shouldRefresh() {
-            // renew ticket 1 day before expiry
-            return new Date().getTime() >= parseInt(State.ticketExpiry) - (1 * (1000 * 60 * 60 * 24));
+            // renew ticket 1 hour before expiry
+            return new Date().getTime() >= parseInt(State.ticketExpiry) - (1 * HOUR);
         }
     };
 
